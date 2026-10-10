@@ -2,7 +2,8 @@ import mongoose, { Schema } from "mongoose";
 const companySchema = new mongoose.Schema({
     name: {
         type: String,
-        required: true
+        required: true,
+        unique: true
     },
     description:{
         type: String,
@@ -15,12 +16,16 @@ const companySchema = new mongoose.Schema({
     location:{
         type: String,
     },
+    address:{
+        type:String,
+        required:true,
+    },
     logo:{
         type:String, //url for logo
     },
     userId:{
-        typr: mongoose.Schema.Types.ObjectId,
-        ref: 'UserId',
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
         required: true
     },
 
@@ -32,4 +37,4 @@ const companySchema = new mongoose.Schema({
 
 },{timestamps: true});
 
-export const Company = mongoose.model("Company", Schema)
+export const Company = mongoose.model("Company", companySchema);

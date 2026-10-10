@@ -9,7 +9,7 @@ const userSchema = new mongoose.Schema({
     required: true,
     unique: true,
   },
-  phonenumber: {
+  phoneNumber: {
     type: String,
     required: true,
     unique: true,
@@ -51,4 +51,6 @@ const userSchema = new mongoose.Schema({
   }
 },{timestamps: true});
 
-export const User = mongoose.model("User", userSchema);
+ export const User = mongoose.model("User", userSchema);
+
+
