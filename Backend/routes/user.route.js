@@ -1,17 +1,36 @@
 import express from "express";
-import { login, register, logout, updateProfile } from "../controllers/user.controller.js";
+
+import {
+  login,
+  register,
+  logout,
+  updateProfile,
+  getProfile,
+} from "../controllers/user.controller.js";
+
 import authenticateToken from "../middleware/isAuthenticated.js";
+import upload from "../middleware/upload.js";
 
 const router = express.Router();
 
-router.route("/register").post(register);
+// Register a new user
+router.post("/register", register);
 
-router.route("/login").post(login);
+// Login user
+router.post("/login", login);
 
-router.route("/logout").post(logout);
+// Logout user
+router.post("/logout", logout);
 
-router.route("/profile/update").post(authenticateToken, updateProfile);
+// Get the logged-in user's profile
+router.get("/profile", authenticateToken, getProfile);
+
+// Update profile and upload or replace resume
+router.post(
+  "/profile/update",
+  authenticateToken,
+  upload.single("resume"),
+  updateProfile
+);
 
 export default router;
-
-

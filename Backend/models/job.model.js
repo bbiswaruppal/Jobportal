@@ -17,7 +17,7 @@ const jobSchema = new mongoose.Schema({
     required: true,
   },
   salary:{
-    type: Number,
+    type: String,
     required: true,
 
   },
@@ -43,12 +43,13 @@ const jobSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
-  application:{
+  applications:[
+  {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Application",
-    default: null,
 
   },
+],
 
 });
 

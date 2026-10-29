@@ -1,151 +1,169 @@
-import {User} from "../models/user.model.js";
+import { User } from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+
+// ==================== REGISTER ====================
 export const register = async (req, res) => {
   try {
-    const { fullname, email, phoneNumber, password, role } = req.body;
+    const {
+      fullname,
+      email,
+      phoneNumber,
+      password,
+      role,
+    } = req.body;
+
     if (!fullname || !email || !phoneNumber || !password || !role) {
-      return res.status(404).json({
+      return res.status(400).json({
+        message: "Missing required fields",
         success: false,
       });
     }
-    const user = await User.findOne({ email });
-    if (user) {
-      return res.status(401).json({
+
+    const existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      return res.status(409).json({
         message: "Email already exists",
         success: false,
       });
     }
-    // convert passwords to hashes
+
     const hashedPassword = await bcrypt.hash(password, 15);
 
     const newUser = new User({
       fullname,
       email,
       phoneNumber,
-
-
-
       password: hashedPassword,
       role,
     });
 
     await newUser.save();
 
-    return res.status(200).json({
+    return res.status(201).json({
       message: `Account created successfully ${fullname}`,
       success: true,
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({
+    console.error("Register error:", error);
+
+    return res.status(500).json({
       message: "Server Error registering user",
       success: false,
     });
   }
 };
 
+// ==================== LOGIN ====================
 export const login = async (req, res) => {
   try {
     const { email, password, role } = req.body;
+
     if (!email || !password || !role) {
-      return res.status(404).json({
+      return res.status(400).json({
         message: "Missing required fields",
         success: false,
       });
     }
-    let user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({
+
+    const foundUser = await User.findOne({ email });
+
+    if (!foundUser) {
+      return res.status(401).json({
         message: "Incorrect email or password",
         success: false,
       });
     }
-    const isMatch = await bcrypt.compare(password, user.password);
+
+    const isMatch = await bcrypt.compare(
+      password,
+      foundUser.password
+    );
+
     if (!isMatch) {
-      return res.status(404).json({
+      return res.status(401).json({
         message: "Incorrect email or password",
         success: false,
       });
     }
-    //check role correctly or not
 
-    if (user.role !== role) {
+    if (foundUser.role !== role) {
       return res.status(403).json({
-        message: "You don't have the necessary role to access this resources",
+        message: "You don't have the necessary role to access this resource",
         success: false,
       });
     }
-    //generate token
 
-    const tokendata = {
-      userId: user._id,
-    };
-    const token = await jwt.sign(tokendata, process.env.JWT_SECRET, {
-      expiresIn: "1d",
-    });
+    const token = jwt.sign(
+      { userId: foundUser._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
 
-    user = {
-      _id: user._id,
-      fullname: user.fullname,
-      email: user.email,
-      phoneNumber: user.phoneNumber,
-      role: user.role,
-      profile: user.profile,
+    const user = {
+      _id: foundUser._id,
+      fullname: foundUser.fullname,
+      email: foundUser.email,
+      phoneNumber: foundUser.phoneNumber,
+      role: foundUser.role,
+      profile: foundUser.profile,
+      resume: foundUser.resume,
     };
 
     return res
       .status(200)
       .cookie("token", token, {
-        maxAge: 1 * 24 * 60 * 60 * 1000,
+        maxAge: 24 * 60 * 60 * 1000,
         httpOnly: true,
         sameSite: "Strict",
       })
       .json({
-        message: `Welcome back $(user.fullname)`,
+        message: `Welcome back ${foundUser.fullname}`,
         user,
         success: true,
       });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({
+    console.error("Login error:", error);
+
+    return res.status(500).json({
       message: "Server Error Login failed",
       success: false,
     });
   }
 };
 
-// Log out section
-
+// ==================== LOGOUT ====================
 export const logout = (req, res) => {
   try {
-    return res.status(200).cookie("token", "", { maxAge: 0 }).json({
-      message: "Logged out sucessfully",
-      success: true,
-    });
+    return res
+      .status(200)
+      .cookie("token", "", {
+        maxAge: 0,
+        httpOnly: true,
+      })
+      .json({
+        message: "Logged out successfully",
+        success: true,
+      });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({
+    console.error("Logout error:", error);
+
+    return res.status(500).json({
       message: "Server Error Logout",
       success: false,
     });
   }
 };
 
-export const updateProfile = async (req, res) => {
+// ==================== GET PROFILE ====================
+export const getProfile = async (req, res) => {
   try {
-    const { fullname, email, phoneNumber, bio, skills } = req.body;
-    const file = req.files;
+    // Authentication middleware sets req.id
+    const userId = req.id;
 
-    // cloudinary upload
-    let skillsArray;
-    if(skills){
-      const skillsArray = skills.spilit(",");
-    }
+    const user = await User.findById(userId).select("-password");
 
-
-    const userId = req.id; //middleware authentication
-    let user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
         message: "User not found",
@@ -153,43 +171,119 @@ export const updateProfile = async (req, res) => {
       });
     }
 
-    // update database profile
-    if(fullname){
-      user.fullname = fullname;
+    return res.status(200).json({
+      message: "Profile fetched successfully",
+      user,
+      success: true,
+    });
+  } catch (error) {
+    console.error("Get profile error:", error);
+
+    return res.status(500).json({
+      message: "Server Error Fetching Profile",
+      success: false,
+    });
+  }
+};
+
+// ==================== UPDATE PROFILE ====================
+export const updateProfile = async (req, res) => {
+  try {
+    const {
+      fullname,
+      email,
+      phoneNumber,
+      bio,
+      skills,
+    } = req.body;
+
+    // Authentication middleware sets req.id
+    const userId = req.id;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+        success: false,
+      });
     }
-    if(email){
-      user.email = email;
+
+    // Update basic fields
+    if (fullname !== undefined && fullname.trim() !== "") {
+      user.fullname = fullname.trim();
     }
-    if(phoneNumber){
-      user.phoneNumber = phoneNumber;
+
+    if (email !== undefined && email.trim() !== "") {
+      const normalizedEmail = email.trim();
+
+      const existingEmail = await User.findOne({
+        email: normalizedEmail,
+        _id: { $ne: userId },
+      });
+
+      if (existingEmail) {
+        return res.status(409).json({
+          message: "Email already exists",
+          success: false,
+        });
+      }
+
+      user.email = normalizedEmail;
     }
-    if(bio){
+
+    if (phoneNumber !== undefined && phoneNumber.trim() !== "") {
+      user.phoneNumber = phoneNumber.trim();
+    }
+
+    // Ensure profile object exists
+    if (!user.profile) {
+      user.profile = {};
+    }
+
+    // Update bio, including an empty value
+    if (bio !== undefined) {
       user.profile.bio = bio;
     }
-    if(skills){
-      user.profile.skills = skillsArray;
+
+    // Update skills
+    if (skills !== undefined) {
+      user.profile.skills = skills
+        .split(",")
+        .map((skill) => skill.trim())
+        .filter(Boolean);
     }
-    // resume
+
+    // Save uploaded resume path
+    if (req.file) {
+      user.resume = req.file.path.replace(/\\/g, "/");
+      console.log("Uploaded resume path:", user.resume);
+    } else {
+      console.log("No resume file received");
+    }
+
     await user.save();
 
-    user = {
+    const updatedUser = {
       _id: user._id,
       fullname: user.fullname,
       email: user.email,
       phoneNumber: user.phoneNumber,
       role: user.role,
       profile: user.profile,
+      resume: user.resume,
     };
 
     return res.status(200).json({
-        message: "Profile updated Sucessfully",
-        user,
-        success: true,
+      message: "Profile updated successfully",
+      user: updatedUser,
+      success: true,
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      message: "Server Error Updating profile",
+    console.error("Update profile error:", error);
+
+    return res.status(500).json({
+      message: "Server Error Updating Profile",
       success: false,
     });
   }
