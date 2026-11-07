@@ -5,21 +5,27 @@ import jwt from "jsonwebtoken";
 // ==================== REGISTER ====================
 export const register = async (req, res) => {
   try {
-    const {
-      fullname,
-      email,
-      phoneNumber,
-      password,
-      role,
-    } = req.body;
+    const { fullname, email, phoneNumber, password, role } = req.body;
 
-    if (!fullname || !email || !phoneNumber || !password || !role) {
+    // 1. Check required fields
+    if (!fullname || !email || !phoneNumber || !password) {
       return res.status(400).json({
         message: "Missing required fields",
         success: false,
       });
     }
 
+    // 2. Validate role
+    const allowedRoles = ["Student", "Recruiter"];
+
+    if (role && !allowedRoles.includes(role)) {
+      return res.status(403).json({
+        message: "Invalid role. Admin registration is not allowed.",
+        success: false,
+      });
+    }
+
+    // 3. Check if email already exists
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
@@ -29,18 +35,22 @@ export const register = async (req, res) => {
       });
     }
 
+    // 4. Hash password
     const hashedPassword = await bcrypt.hash(password, 15);
 
+    // 5. Create new user
     const newUser = new User({
       fullname,
       email,
       phoneNumber,
       password: hashedPassword,
-      role,
+      role: role || "Student",
     });
 
+    // 6. Save user
     await newUser.save();
 
+    // 7. Send response
     return res.status(201).json({
       message: `Account created successfully ${fullname}`,
       success: true,
@@ -76,10 +86,7 @@ export const login = async (req, res) => {
       });
     }
 
-    const isMatch = await bcrypt.compare(
-      password,
-      foundUser.password
-    );
+    const isMatch = await bcrypt.compare(password, foundUser.password);
 
     if (!isMatch) {
       return res.status(401).json({
@@ -95,11 +102,9 @@ export const login = async (req, res) => {
       });
     }
 
-    const token = jwt.sign(
-      { userId: foundUser._id },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
-    );
+    const token = jwt.sign({ userId: foundUser._id }, process.env.JWT_SECRET, {
+      expiresIn: "1d",
+    });
 
     const user = {
       _id: foundUser._id,
@@ -155,12 +160,17 @@ export const logout = (req, res) => {
     });
   }
 };
-
 // ==================== GET PROFILE ====================
 export const getProfile = async (req, res) => {
   try {
-    // Authentication middleware sets req.id
     const userId = req.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        message: "Authentication required",
+        success: false,
+      });
+    }
 
     const user = await User.findById(userId).select("-password");
 
@@ -189,16 +199,17 @@ export const getProfile = async (req, res) => {
 // ==================== UPDATE PROFILE ====================
 export const updateProfile = async (req, res) => {
   try {
-    const {
-      fullname,
-      email,
-      phoneNumber,
-      bio,
-      skills,
-    } = req.body;
+    const { fullname, email, phoneNumber, bio, skills } = req.body;
 
-    // Authentication middleware sets req.id
+    // Authentication middleware must set req.id
     const userId = req.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        message: "Authentication required",
+        success: false,
+      });
+    }
 
     const user = await User.findById(userId);
 
@@ -241,12 +252,10 @@ export const updateProfile = async (req, res) => {
       user.profile = {};
     }
 
-    // Update bio, including an empty value
     if (bio !== undefined) {
       user.profile.bio = bio;
     }
 
-    // Update skills
     if (skills !== undefined) {
       user.profile.skills = skills
         .split(",")
@@ -257,34 +266,87 @@ export const updateProfile = async (req, res) => {
     // Save uploaded resume path
     if (req.file) {
       user.resume = req.file.path.replace(/\\/g, "/");
+
       console.log("Uploaded resume path:", user.resume);
     } else {
       console.log("No resume file received");
     }
 
+    // Save profile to MongoDB
     await user.save();
 
-    const updatedUser = {
-      _id: user._id,
-      fullname: user.fullname,
-      email: user.email,
-      phoneNumber: user.phoneNumber,
-      role: user.role,
-      profile: user.profile,
-      resume: user.resume,
-    };
+    // Verify the saved document directly from MongoDB
+    const savedUser = await User.findById(user._id).select("-password").lean();
+
+    console.log("MongoDB saved resume:", savedUser?.resume);
+    console.log("Updated user ID:", user._id.toString());
 
     return res.status(200).json({
       message: "Profile updated successfully",
-      user: updatedUser,
+      user: savedUser,
       success: true,
     });
   } catch (error) {
     console.error("Update profile error:", error);
 
     return res.status(500).json({
-      message: "Server Error Updating Profile",
+      message: error.message || "Server Error Updating Profile",
       success: false,
+    });
+  }
+};
+
+// ==================== UPDATE PROFILE PICTURE ====================
+
+export const updateProfilePicture = async (req, res) => {
+  try {
+    const userId = req.user?._id || req._id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "No profile picture received",
+      });
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (!user.profile) {
+      user.profile = {};
+    }
+
+    user.profile.profilePhoto = req.file.filename;
+
+    await user.save();
+
+    console.log("Saved Profile:", user.profile);
+    console.log("Saved Profile Picture:", user.profile.profilePhoto);
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile picture uploaded successfully",
+      user,
+    });
+  } catch (error) {
+    console.error("Profile picture update error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message,
     });
   }
 };

@@ -29,14 +29,24 @@ function Login() {
     try {
       const response = await API.post("/users/login", formData);
       if (response.data.success) {
-        localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("userRole", formData.role);
+        const user = response.data.user;
 
-        if (formData.role === "Student") {
-          navigate("/student-dashboard");
-        } else {
+        localStorage.setItem("isLoggedIn", "true");
+        localStorage.setItem("userRole", user.role);
+
+        if (user.role === "Student") {
+          navigate("/");
+        } else if (user.role === "Recruiter") {
           navigate("/recruiter-dashboard");
+        } else if (user.role === "Admin") {
+          navigate("/admin/dashboard");
+        } else if (user.role === "Admin") {
+          navigate("/admin/dashboard");
+        } else {
+          setMessage("Invalid user role");
         }
+
+        return;
       }
       setMessage(response.data.message || "Login successful!");
     } catch (error) {
@@ -85,6 +95,7 @@ function Login() {
           >
             <option value="Student">Student</option>
             <option value="Recruiter">Recruiter</option>
+            <option value="Admin">Admin</option>
           </select>
 
           <button

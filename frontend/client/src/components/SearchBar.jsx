@@ -4,12 +4,29 @@ function SearchBar({ onSearch }) {
   const [jobTitle, setJobTitle] = useState("");
   const [location, setLocation] = useState("");
 
-  function handleSearch() {
-    onSearch({ jobTitle, location });
+  function handleSearch(e) {
+    e.preventDefault();
+
+    onSearch({
+      jobTitle: jobTitle.trim(),
+      location: location.trim(),
+    });
+  }
+
+  function handleReset() {
+    setJobTitle("");
+    setLocation("");
+    onSearch({
+      jobTitle: "",
+      location: "",
+    });
   }
 
   return (
-    <div className="mx-auto mt-8 flex max-w-2xl flex-col gap-3 rounded-xl bg-white p-4 shadow md:flex-row">
+    <form
+      onSubmit={handleSearch}
+      className="mx-auto mt-8 flex max-w-2xl flex-col gap-3 rounded-xl bg-white p-4 shadow md:flex-row"
+    >
       <input
         type="text"
         placeholder="Job title or skill"
@@ -27,12 +44,20 @@ function SearchBar({ onSearch }) {
       />
 
       <button
-        onClick={handleSearch}
+        type="submit"
         className="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700"
       >
         Search
       </button>
-    </div>
+
+      <button
+        type="button"
+        onClick={handleReset}
+        className="rounded-lg border px-6 py-3 font-semibold text-gray-700 hover:bg-gray-100"
+      >
+        Reset
+      </button>
+    </form>
   );
 }
 

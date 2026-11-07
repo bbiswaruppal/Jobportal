@@ -1,5 +1,6 @@
 import express from "express";
 import authenticateToken from "../middleware/isAuthenticated.js";
+import { uploadLogo } from "../middleware/upload.js";
 import{registerCompany, getAllcompanies, getCompanyById, updateCompany} from "../controllers/company.controller.js";
 
 const router = express.Router();
@@ -9,6 +10,8 @@ router.route("/get").get(authenticateToken, getAllcompanies);
 
 router.route("/get/:id").get(authenticateToken,getCompanyById);
 
-router.route("/update/:id").put(authenticateToken, updateCompany);
+router
+  .route("/update/:id")
+  .put(authenticateToken, uploadLogo.single("logo"), updateCompany);
 
 export default router;

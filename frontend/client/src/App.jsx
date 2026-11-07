@@ -1,12 +1,33 @@
-import { useState } from "react";
-import { Routes, Route } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+
+import API from "./api.js";
 import Navbar from "./components/Navbar.jsx";
 import JobCard from "./components/JobCard.jsx";
 import SearchBar from "./components/SearchBar.jsx";
+
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import StudentDashboard from "./pages/StudentDashboard.jsx";
 import RecruiterDashboard from "./pages/RecruiterDashboard.jsx";
+import TrackApplications from "./pages/TrackApplications.jsx";
+
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import ManageUsers from "./pages/admin/ManageUsers";
+import ManageCompanies from "./pages/admin/ManageCompanies";
+import ManageApplications from "./pages/admin/ManageApplications";
+import ManageJobs from "./pages/admin/ManageJobs";
+
+import JobDetails from "./pages/JobDetails.jsx";
+import CreateCompany from "./pages/CreateCompany.jsx";
+
+import RecruiterLayout from "./layouts/RecruiterLayout.jsx";
+import RecruiterHome from "./pages/recruiter/RecruiterHome.jsx";
+import PostJob from "./pages/recruiter/PostJob.jsx";
+import MyJobs from "./pages/recruiter/MyJobs.jsx";
+import Applicants from "./pages/recruiter/Applicants.jsx";
+import MyProfile from "./pages/recruiter/MyProfile.jsx";
+import CompanySettings from "./pages/recruiter/CompanySettings.jsx";
 
 function App() {
   const [search, setSearch] = useState({
@@ -14,35 +35,35 @@ function App() {
     location: "",
   });
 
-  const jobs = [
-    {
-      title: "Frontend Developer",
-      company: "Tech Solutions",
-      location: "Kolkata · Full-time",
-      salary: "₹3–6 LPA",
-    },
-    {
-      title: "MERN Stack Developer",
-      company: "Web Innovators",
-      location: "Remote · Full-time",
-      salary: "₹4–8 LPA",
-    },
-    {
-      title: "React Developer Intern",
-      company: "Startup Hub",
-      location: "Kolkata · Internship",
-      salary: "₹10k–15k/month",
-    },
-  ];
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        const response = await API.get("/job/get");
+        setJobs(response.data.jobs || []);
+      } catch (err) {
+        console.error("Error fetching jobs:", err);
+        setError(err.response?.data?.message || "Failed to load jobs.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchJobs();
+  }, []);
 
   const filteredJobs = jobs.filter((job) => {
-    const titleMatch = job.title
-      .toLowerCase()
-      .includes(search.jobTitle.toLowerCase());
+    const title = String(job.title || "").toLowerCase();
+    const location = String(job.location || "").toLowerCase();
 
-    const locationMatch = job.location
-      .toLowerCase()
-      .includes(search.location.toLowerCase());
+    const titleMatch = title.includes(search.jobTitle.trim().toLowerCase());
+
+    const locationMatch = location.includes(
+      search.location.trim().toLowerCase(),
+    );
 
     return titleMatch && locationMatch;
   });
@@ -69,27 +90,51 @@ function App() {
                 towards your dream career.
               </p>
 
-              <button className="mt-8 rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700">
+              <button
+                type="button"
+                onClick={() =>
+                  document
+                    .getElementById("featured-jobs")
+                    ?.scrollIntoView({ behavior: "smooth" })
+                }
+                className="mt-8 rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700"
+              >
                 Explore Jobs
               </button>
 
               <SearchBar onSearch={setSearch} />
             </section>
 
-            <section className="px-6 py-12 md:px-12">
+            <section id="featured-jobs" className="px-6 py-12 md:px-12">
               <h2 className="text-3xl font-bold">Featured Jobs</h2>
 
-              <div className="mt-8 grid gap-6 md:grid-cols-3">
-                {filteredJobs.map((job) => (
-                  <JobCard key={job.title} {...job} />
-                ))}
+              {loading && <p className="mt-6 text-gray-600">Loading jobs...</p>}
 
-                {filteredJobs.length === 0 && (
-                  <p className="text-gray-600">
-                    No jobs found. Try another search.
+              {!loading && error && (
+                <p className="mt-6 text-red-600" role="alert">
+                  {error}
+                </p>
+              )}
+
+              {!loading && !error && (
+                <>
+                  <p className="mt-2 text-gray-600">
+                    {filteredJobs.length} jobs found
                   </p>
-                )}
-              </div>
+
+                  <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {filteredJobs.map((job) => (
+                      <JobCard key={job._id} {...job} />
+                    ))}
+                  </div>
+
+                  {filteredJobs.length === 0 && (
+                    <p className="mt-6 text-gray-600">
+                      No jobs found. Try another search.
+                    </p>
+                  )}
+                </>
+              )}
             </section>
           </div>
         }
@@ -97,9 +142,41 @@ function App() {
 
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+
       <Route path="/student-dashboard" element={<StudentDashboard />} />
 
-      <Route path="/recruiter-dashboard" element={<RecruiterDashboard />} />
+      {/* Student Application Tracking */}
+      <Route
+        path="/student/track-applications"
+        element={<TrackApplications />}
+      />
+
+      {/* Recruiter Routes */}
+      <Route path="/recruiter" element={<RecruiterLayout />}>
+        <Route index element={<Navigate to="/recruiter-dashboard" replace />} />
+
+        <Route path="dashboard" element={<RecruiterHome />} />
+        <Route path="post-job" element={<PostJob />} />
+        <Route path="my-jobs" element={<MyJobs />} />
+        <Route path="applicants" element={<Applicants />} />
+        <Route path="profile" element={<MyProfile />} />
+        <Route path="company-settings" element={<CompanySettings />} />
+      </Route>
+
+      <Route
+        path="/recruiter-dashboard"
+        element={<Navigate to="/recruiter/dashboard" replace />}
+      />
+
+      {/* Admin Routes */}
+      <Route path="/admin/dashboard" element={<AdminDashboard />} />
+      <Route path="/admin/users" element={<ManageUsers />} />
+      <Route path="/admin/companies" element={<ManageCompanies />} />
+      <Route path="/admin/applications" element={<ManageApplications />} />
+      <Route path="/admin/jobs" element={<ManageJobs />} />
+
+      <Route path="/jobs/:id" element={<JobDetails />} />
+      <Route path="/create-company" element={<CreateCompany />} />
     </Routes>
   );
 }

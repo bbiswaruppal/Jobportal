@@ -1,59 +1,73 @@
 import mongoose from "mongoose";
+
 const userSchema = new mongoose.Schema(
   {
     fullname: {
       type: String,
       required: true,
     },
+
     email: {
       type: String,
       required: true,
       unique: true,
     },
+
     phoneNumber: {
       type: String,
       required: true,
       unique: true,
     },
+
     password: {
       type: String,
       required: true,
     },
+
     role: {
       type: String,
-      enum: ["Student", "Recruiter"],
+      enum: ["Student", "Recruiter", "Admin"],
       default: "Student",
       required: true,
     },
+
     profile: {
       bio: {
         type: String,
+        default: "",
       },
-      Skills: [
+
+      skills: [
         {
           type: String,
         },
       ],
-      resume: {
-        type: String, //url to resume file from database
-        default: "",
-      },
-      resumeOriginalname: {
-        type: String, // original name of resume file
-      },
+
       company: {
         type: mongoose.Schema.Types.ObjectId,
-        referance: "Company",
+        ref: "Company",
       },
+
       profilePhoto: {
-        type: String, // url to profile photo file
+        type: String,
         default: "",
       },
     },
+
+    // Resume fields at root level
+    resume: {
+      type: String,
+      default: "",
+    },
+
+    resumeOriginalname: {
+      type: String,
+      default: "",
+    },
   },
-  { timestamps: true },
+  {
+    timestamps: true,
+  },
 );
 
- export const User = mongoose.model("User", userSchema);
-
-
+export const User = mongoose.model("User", userSchema);

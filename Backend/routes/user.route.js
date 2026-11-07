@@ -6,10 +6,11 @@ import {
   logout,
   updateProfile,
   getProfile,
+  updateProfilePicture,
 } from "../controllers/user.controller.js";
 
 import authenticateToken from "../middleware/isAuthenticated.js";
-import upload from "../middleware/upload.js";
+import upload, { uploadProfilePicture } from "../middleware/upload.js";
 
 const router = express.Router();
 
@@ -31,6 +32,13 @@ router.post(
   authenticateToken,
   upload.single("resume"),
   updateProfile
+);
+// Upload or replace profile picture
+router.post(
+  "/profile/picture",
+  authenticateToken,
+  uploadProfilePicture.single("profilePicture"),
+  updateProfilePicture
 );
 
 export default router;
