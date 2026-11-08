@@ -30,6 +30,11 @@ const userSchema = new mongoose.Schema(
       default: "Student",
       required: true,
     },
+    
+    isSuperAdmin: {
+      type: Boolean,
+      default: false,
+    },
 
     profile: {
       bio: {
