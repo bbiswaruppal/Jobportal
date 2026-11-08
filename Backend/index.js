@@ -68,7 +68,7 @@ app.use("/api/users", userRoute);
 app.use("/api/company", companyRoute);
 app.use("/api/job", jobRoute);
 app.use("/api/application", applicationRoute);
-app.use("/api/v1/admin", adminRoutes);
+app.use("/api/admin", adminRoutes);
 app.use("/api/notifications", notificationRoute);
 app.use("/api/ai", aiRoute);
 

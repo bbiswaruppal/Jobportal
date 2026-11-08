@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import API from "../../api.js";
 import { FileSearch, X } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const Applicants = () => {
   const [jobs, setJobs] = useState([]);
@@ -646,8 +648,10 @@ const Applicants = () => {
                 Candidate Evaluation Report
               </h3>
 
-              <div className="whitespace-pre-wrap break-words text-sm leading-7 text-gray-700">
-                {evaluation.evaluation}
+              <div className="max-w-full overflow-x-auto wrap-break-words rounded-xl bg-white p-4 text-sm leading-7 text-gray-700 [&_strong]:font-bold [&_h1]:mb-3 [&_h1]:text-xl [&_h1]:font-bold [&_h2]:mb-2 [&_h2]:mt-5 [&_h2]:text-lg [&_h2]:font-bold [&_p]:mb-3 [&_table]:my-4 [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-gray-300 [&_th]:bg-purple-100 [&_th]:p-2 [&_td]:border [&_td]:border-gray-300 [&_td]:p-2 [&_li]:ml-5 [&_li]:list-disc">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {evaluation.evaluation || ""}
+                </ReactMarkdown>
               </div>
             </div>
 
@@ -703,8 +707,10 @@ const Applicants = () => {
                 AI Resume Analysis
               </h3>
 
-              <div className="whitespace-pre-wrap break-words text-sm leading-7 text-gray-700">
-                {resumeAnalysis.analysis}
+              <div className="max-w-full overflow-x-auto break-words rounded-xl bg-white p-4 text-sm leading-7 text-gray-700 [&_strong]:font-bold [&_h1]:mb-3 [&_h1]:text-xl [&_h1]:font-bold [&_h2]:mb-2 [&_h2]:mt-5 [&_h2]:text-lg [&_h2]:font-bold [&_p]:mb-3 [&_table]:my-4 [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-gray-300 [&_th]:bg-indigo-100 [&_th]:p-2 [&_td]:border [&_td]:border-gray-300 [&_td]:p-2 [&_li]:ml-5 [&_li]:list-disc">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {resumeAnalysis.analysis || ""}
+                </ReactMarkdown>
               </div>
             </div>
 

@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { X, Sparkles, ClipboardList } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import API from "../../api.js";
 
 const MyJobs = () => {
@@ -11,6 +14,11 @@ const MyJobs = () => {
   const [editingJob, setEditingJob] = useState(null);
   const [updatingJob, setUpdatingJob] = useState(false);
   const [deletingJob, setDeletingJob] = useState(null);
+
+  // HireNova AI
+  const [generatingJobId, setGeneratingJobId] = useState(null);
+  const [interviewQuestions, setInterviewQuestions] = useState(null);
+  const [questionCount, setQuestionCount] = useState(10);
 
   const navigate = useNavigate();
 
@@ -43,7 +51,7 @@ const MyJobs = () => {
   // Job type options
   const jobTypes = [...new Set(jobs.map((job) => job.jobType).filter(Boolean))];
 
-  // Search and filter jobs
+  // Search and filter
   const filteredJobs = jobs.filter((job) => {
     const searchText = search.toLowerCase();
 
@@ -57,7 +65,7 @@ const MyJobs = () => {
     return matchesSearch && matchesType;
   });
 
-  // Open edit form
+  // Edit job
   const handleEditJob = (job) => {
     setEditingJob({
       ...job,
@@ -67,7 +75,6 @@ const MyJobs = () => {
     });
   };
 
-  // Handle input changes
   const handleEditChange = (e) => {
     const { name, value } = e.target;
 
@@ -146,6 +153,45 @@ const MyJobs = () => {
     }
   };
 
+  // Generate interview questions using HireNova AI
+  const handleGenerateQuestions = async (job) => {
+    try {
+      setGeneratingJobId(job._id);
+      setInterviewQuestions(null);
+
+      const skills = Array.isArray(job.requirements)
+        ? job.requirements.join(", ")
+        : job.requirements || "";
+
+      const response = await API.post("/ai/generate-interview-questions", {
+        jobTitle: job.title,
+        skills,
+        experience: `${job.experience ?? 0} years`,
+        questionCount: Number(questionCount),
+      });
+
+      if (response.data.success) {
+        setInterviewQuestions({
+          jobTitle: job.title,
+          questions: response.data.questions,
+        });
+      } else {
+        alert(
+          response.data.message || "Failed to generate interview questions.",
+        );
+      }
+    } catch (err) {
+      console.error("Interview Question Generator Error:", err);
+
+      alert(
+        err.response?.data?.message ||
+          "Unable to generate interview questions.",
+      );
+    } finally {
+      setGeneratingJobId(null);
+    }
+  };
+
   const inputClass =
     "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100";
 
@@ -178,7 +224,7 @@ const MyJobs = () => {
         </button>
       </div>
 
-      {/* Summary Card */}
+      {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex items-center justify-between rounded-2xl border border-blue-100 bg-white p-5 shadow-sm">
           <div>
@@ -274,6 +320,7 @@ const MyJobs = () => {
       {loading && (
         <div className="rounded-2xl border border-slate-100 bg-white p-12 text-center shadow-sm">
           <div className="mx-auto mb-3 h-9 w-9 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
+
           <p className="text-sm font-medium text-slate-500">
             Loading your jobs...
           </p>
@@ -284,6 +331,7 @@ const MyJobs = () => {
       {!loading && error && (
         <div className="rounded-xl border border-red-100 bg-red-50 p-5 text-sm text-red-600">
           {error}
+
           <button onClick={loadMyJobs} className="ml-3 font-semibold underline">
             Try Again
           </button>
@@ -460,6 +508,43 @@ const MyJobs = () => {
                 >
                   👥 Applicants
                 </button>
+
+                {/* Question Count Selector */}
+                <div className="mt-2 flex w-full flex-col gap-2 rounded-xl border border-purple-100 bg-purple-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <label
+                    htmlFor={`question-count-${job._id}`}
+                    className="text-sm font-semibold text-purple-800"
+                  >
+                    Number of interview questions
+                  </label>
+
+                  <select
+                    id={`question-count-${job._id}`}
+                    value={questionCount}
+                    onChange={(e) => setQuestionCount(Number(e.target.value))}
+                    disabled={generatingJobId !== null}
+                    className="rounded-lg border border-purple-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
+                  >
+                    {[5, 10, 15, 20].map((count) => (
+                      <option key={count} value={count}>
+                        {count} Questions
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* AI Interview Questions */}
+                <button
+                  onClick={() => handleGenerateQuestions(job)}
+                  disabled={generatingJobId === job._id}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Sparkles size={17} />
+
+                  {generatingJobId === job._id
+                    ? "Generating Questions..."
+                    : `Generate ${questionCount} Interview Questions with HireNova AI`}
+                </button>
               </div>
             </div>
           ))}
@@ -470,7 +555,6 @@ const MyJobs = () => {
       {editingJob && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-slate-950/60 p-4 backdrop-blur-sm">
           <div className="my-8 w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
-            {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
               <div>
                 <h2 className="text-xl font-bold text-slate-800">Edit Job</h2>
@@ -489,7 +573,6 @@ const MyJobs = () => {
               </button>
             </div>
 
-            {/* Modal Form */}
             <form onSubmit={handleUpdateJob} className="space-y-5 p-6">
               {[
                 ["title", "Job Title"],
@@ -529,7 +612,6 @@ const MyJobs = () => {
                 </div>
               ))}
 
-              {/* Modal Actions */}
               <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
                 <button
                   type="button"
@@ -548,6 +630,77 @@ const MyJobs = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Interview Questions Modal */}
+      {interviewQuestions && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[88vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <div>
+                <div className="mb-2 flex items-center gap-2 text-purple-600">
+                  <Sparkles size={21} />
+                  <span className="text-sm font-bold">HireNova AI</span>
+                </div>
+
+                <h2 className="text-xl font-bold text-slate-800">
+                  Interview Questions
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  {interviewQuestions.jobTitle}
+                </p>
+              </div>
+
+              <button
+                onClick={() => setInterviewQuestions(null)}
+                className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100"
+              >
+                <X size={23} />
+              </button>
+            </div>
+
+            <div className="mb-5 rounded-xl border border-purple-100 bg-purple-50 p-4">
+              <div className="flex items-center gap-2 text-purple-800">
+                <ClipboardList size={19} />
+
+                <h3 className="font-semibold">
+                  AI Generated Interview Questions
+                </h3>
+              </div>
+            </div>
+
+            <div className="max-w-full overflow-x-auto break-words rounded-xl border border-slate-100 bg-slate-50 p-5 text-sm leading-7 text-slate-700 [&_a]:text-blue-600 [&_a]:underline [&_blockquote]:my-3 [&_blockquote]:border-l-4 [&_blockquote]:border-purple-300 [&_blockquote]:pl-4 [&_code]:rounded [&_code]:bg-slate-200 [&_code]:px-1 [&_code]:py-0.5 [&_h1]:mb-3 [&_h1]:text-xl [&_h1]:font-bold [&_h2]:mb-2 [&_h2]:mt-5 [&_h2]:text-lg [&_h2]:font-bold [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:font-bold [&_li]:ml-5 [&_li]:list-disc [&_ol]:my-3 [&_ol]:list-decimal [&_p]:mb-3 [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-slate-900 [&_pre]:p-4 [&_pre]:text-slate-100 [&_strong]:font-bold [&_table]:my-4 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-slate-300 [&_td]:p-2 [&_th]:border [&_th]:border-slate-300 [&_th]:bg-purple-100 [&_th]:p-2 [&_th]:text-left">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {typeof interviewQuestions.questions === "string"
+                  ? interviewQuestions.questions
+                  : Array.isArray(interviewQuestions.questions)
+                    ? interviewQuestions.questions
+                        .map((q, index) =>
+                          typeof q === "string"
+                            ? `${index + 1}. ${q}`
+                            : `${index + 1}. ${q.question || JSON.stringify(q)}`,
+                        )
+                        .join("\n\n")
+                    : JSON.stringify(interviewQuestions.questions, null, 2)}
+              </ReactMarkdown>
+            </div>
+
+            <p className="mt-4 text-xs text-slate-500">
+              These AI-generated questions are suggestions. Review and customize
+              them according to your interview requirements.
+            </p>
+
+            <div className="mt-5 flex justify-end">
+              <button
+                onClick={() => setInterviewQuestions(null)}
+                className="rounded-lg bg-slate-800 px-6 py-2.5 font-semibold text-white transition hover:bg-slate-900"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

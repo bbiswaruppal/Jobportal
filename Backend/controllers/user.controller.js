@@ -200,6 +200,8 @@ export const getProfile = async (req, res) => {
 export const updateProfile = async (req, res) => {
   try {
     const { fullname, email, phoneNumber, bio, skills } = req.body;
+    console.log("Received Skills:", req.body.skills);
+    console.log("Received Body:", req.body);
 
     // Authentication middleware must set req.id
     const userId = req.id;
@@ -274,6 +276,10 @@ export const updateProfile = async (req, res) => {
 
     // Save profile to MongoDB
     await user.save();
+
+    const checkUser = await User.findById(userId).lean();
+
+    console.log("Saved Skills in MongoDB:", checkUser?.profile?.skills);
 
     // Verify the saved document directly from MongoDB
     const savedUser = await User.findById(user._id).select("-password").lean();
