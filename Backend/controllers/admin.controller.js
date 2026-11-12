@@ -297,3 +297,69 @@ export const updateApplicationStatus = async (req, res) => {
     });
   }
 };
+
+// ==================== GET ALL ADMINS ====================
+// Super Admin Only
+
+export const getAllAdmins = async (req, res) => {
+  try {
+    const admins = await User.find({
+      role: "Admin",
+      isSuperAdmin: false,
+    })
+      .select("_id fullname email phoneNumber role isSuperAdmin createdAt")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      count: admins.length,
+      admins,
+    });
+  } catch (error) {
+    console.error("Get All Admins Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch admins",
+    });
+  }
+};
+
+// ==================== DELETE ADMIN ====================
+// Super Admin Only
+
+export const deleteAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const admin = await User.findById(id);
+
+    if (!admin || admin.role !== "Admin") {
+      return res.status(404).json({
+        success: false,
+        message: "Admin not found",
+      });
+    }
+
+    if (admin.isSuperAdmin === true) {
+      return res.status(403).json({
+        success: false,
+        message: "Super Admin cannot be removed",
+      });
+    }
+
+    await User.findByIdAndDelete(id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Admin removed successfully",
+    });
+  } catch (error) {
+    console.error("Delete Admin Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to remove admin",
+    });
+  }
+};

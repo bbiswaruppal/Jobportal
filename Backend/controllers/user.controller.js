@@ -5,22 +5,12 @@ import jwt from "jsonwebtoken";
 // ==================== REGISTER ====================
 export const register = async (req, res) => {
   try {
-    const { fullname, email, phoneNumber, password, role } = req.body;
+    const { fullname, email, phoneNumber, password } = req.body;
 
     // 1. Check required fields
     if (!fullname || !email || !phoneNumber || !password) {
       return res.status(400).json({
         message: "Missing required fields",
-        success: false,
-      });
-    }
-
-    // 2. Validate role
-    const allowedRoles = ["Student", "Recruiter"];
-
-    if (role && !allowedRoles.includes(role)) {
-      return res.status(403).json({
-        message: "Invalid role. Admin registration is not allowed.",
         success: false,
       });
     }
@@ -44,7 +34,8 @@ export const register = async (req, res) => {
       email,
       phoneNumber,
       password: hashedPassword,
-      role: role || "Student",
+      role: "Student",
+      isSuperAdmin: false,
     });
 
     // 6. Save user
@@ -112,6 +103,7 @@ export const login = async (req, res) => {
       email: foundUser.email,
       phoneNumber: foundUser.phoneNumber,
       role: foundUser.role,
+      isSuperAdmin: foundUser.isSuperAdmin || false,
       profile: foundUser.profile,
       resume: foundUser.resume,
     };

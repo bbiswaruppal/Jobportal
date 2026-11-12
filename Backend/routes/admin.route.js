@@ -12,7 +12,10 @@ import {
   deleteJob,
   getAllApplications,
   updateApplicationStatus,
+  getAllAdmins,
+  deleteAdmin,
 } from "../controllers/admin.controller.js";
+import superAdminAuth from "../middleware/superAdminAuth.js";
 
 const router = express.Router();
 
@@ -42,6 +45,22 @@ router.patch(
   authenticateToken,
   adminAuth,
   updateApplicationStatus,
+);
+
+// Super Admin - Manage Admins
+router.get(
+  "/admins",
+  authenticateToken,
+  superAdminAuth,
+  getAllAdmins
+);
+
+// Super Admin - Delete Admin
+router.delete(
+  "/admins/:id",
+  authenticateToken,
+  superAdminAuth,
+  deleteAdmin
 );
 
 export default router;
